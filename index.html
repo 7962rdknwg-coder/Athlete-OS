@@ -859,11 +859,22 @@ function buildLineGraph(points,yLabel){
   </svg></div>`;
 }
 function renderProgress(){
-  const featured=['Sprints 5m','Sprints 10m','40yd Dash','Zone 2 Run','Bench Press','Heavy Squats','Pull Ups','Karate Sparring'];
-  document.getElementById('exerciseCards').innerHTML=featured.map(ex=>{
-    const best=bestForExercise(ex),unit=exerciseDefs[ex].metrics[0];
-    return `<button class="excard" data-ex="${ex}"><div class="muted">${ex}</div><div class="value">${best==null?'—':best}</div><div class="muted">${best==null?'No data yet':unit}</div></button>`;
+  refreshExerciseDefs();
+  const allExercises=Object.keys(exerciseDefs).sort((a,b)=>{
+    const fa=focusForExercise(a), fb=focusForExercise(b);
+    return fa.localeCompare(fb) || a.localeCompare(b);
+  });
+
+  document.getElementById('exerciseCards').innerHTML=allExercises.map(ex=>{
+    const best=bestForExercise(ex),unit=exerciseDefs[ex].metrics[0],focus=focusForExercise(ex);
+    return `<button class="excard" data-ex="${ex}">
+      <div class="muted">${focus}</div>
+      <div style="font-weight:800;margin-top:4px">${ex}</div>
+      <div class="value">${best==null?'—':best}</div>
+      <div class="muted">${best==null?'No data yet':unit}</div>
+    </button>`;
   }).join('');
+
   document.querySelectorAll('.excard').forEach(b=>b.addEventListener('click',()=>openExerciseDetail(b.dataset.ex)));
 }
 
