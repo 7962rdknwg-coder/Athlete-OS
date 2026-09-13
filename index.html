@@ -23,6 +23,8 @@ button{cursor:pointer}
 .datebox{text-align:right}
 .datebox .date{font-weight:800;font-size:14px}
 .datebox .day{font-size:12px;color:var(--muted)}
+.rest-timer{margin-top:8px;font-size:15px;font-weight:900;letter-spacing:.04em;color:var(--text)}
+.rest-timer.active{color:#8bc6ff}
 .nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .nav button,.bottom button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:14px;padding:10px 14px;font-weight:800}
 .nav button.active,.bottom button.active{background:#17304a;color:#fff;border-color:#2c557d}
@@ -152,7 +154,7 @@ textarea{min-height:90px}
 <div class="app">
   <div class="top">
     <div><div class="brand">ATHLETE OS</div><div class="tag">PLAN · ADAPT · TRAIN · PROGRESS</div></div>
-    <div class="datebox"><div class="date" id="todayDate">—</div><div class="day" id="todayDay">—</div></div>
+    <div class="datebox"><div class="date" id="todayDate">—</div><div class="day" id="todayDay">—</div><div class="rest-timer" id="restTimer">—</div></div>
   </div>
 
   <div class="nav">
@@ -393,6 +395,44 @@ const defaultState={
 let state;
 try{state=JSON.parse(localStorage.getItem(KEY))||structuredClone(defaultState)}catch(e){state=structuredClone(defaultState)}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+
+const REST_TIMER_KEY='athleteOS_restTimerEnd';
+let restTimerInterval=null;
+
+function formatClockTime(d){
+  return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+function renderRestTimer(){
+  const el=document.getElementById('restTimer');
+  if(!el)return;
+
+  const end=Number(localStorage.getItem(REST_TIMER_KEY)||0);
+  const now=Date.now();
+
+  if(end>now){
+    const remaining=Math.max(0,Math.ceil((end-now)/1000));
+    const min=Math.floor(remaining/60);
+    const sec=remaining%60;
+    el.textContent=`REST ${min}:${String(sec).padStart(2,'0')}`;
+    el.classList.add('active');
+  }else{
+    if(end) localStorage.removeItem(REST_TIMER_KEY);
+    el.textContent=formatClockTime(new Date());
+    el.classList.remove('active');
+  }
+}
+function startRestTimer(seconds=180){
+  localStorage.setItem(REST_TIMER_KEY,String(Date.now()+seconds*1000));
+  renderRestTimer();
+  if(restTimerInterval)clearInterval(restTimerInterval);
+  restTimerInterval=setInterval(renderRestTimer,1000);
+}
+function initRestTimer(){
+  renderRestTimer();
+  if(restTimerInterval)clearInterval(restTimerInterval);
+  restTimerInterval=setInterval(renderRestTimer,1000);
+}
+
 function parseDateLocal(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12)}
 function dayDiff(a,b){return Math.ceil((b-a)/(1000*60*60*24))}
 function currentPhase(){
@@ -928,7 +968,7 @@ document.getElementById('recordSetUniversal').addEventListener('click',()=>{
   document.getElementById('primaryValue').value='';
   document.getElementById('secondaryValueUniversal').value='';
   document.getElementById('logNotes').value='';
-  save(); renderSetQueue(); renderProgress();
+  save(); renderSetQueue(); renderProgress(); startRestTimer(180);
   document.getElementById('saveMsg').textContent='Set recorded.';
 });
 
@@ -948,7 +988,8 @@ document.getElementById('phaseBox').addEventListener('keydown',e=>{if(e.key==='E
 document.getElementById('closeCalendar').addEventListener('click',e=>{e.stopPropagation();togglePhaseCalendar(false)});
 
 document.getElementById('logDate').value=new Date().toISOString().slice(0,10);
-renderDate();renderPhase();renderHomeSession();renderPlan();renderComps();populateExercises();renderProgress();
+renderDate();
+initRestTimer();renderPhase();renderHomeSession();renderPlan();renderComps();populateExercises();renderProgress();
 </script>
 </body>
 </html>
