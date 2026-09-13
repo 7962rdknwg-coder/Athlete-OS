@@ -145,6 +145,13 @@ textarea{min-height:90px}
 .rule-card .rule-text{font-weight:800;line-height:1.35}
 @media(max-width:620px){.rules-grid{grid-template-columns:1fr}}
 
+
+.exercise-manager{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.exercise-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.exercise-library{display:grid;gap:8px;margin-top:12px}
+.exercise-library-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;background:#0a1521;border:1px solid var(--line);border-radius:12px}
+.exercise-library-row small{color:var(--muted);display:block;margin-top:2px}
+@media(max-width:620px){.exercise-manager-grid{grid-template-columns:1fr}}
 @media(max-width:820px){
   .nav{display:none}.bottom{display:flex}.grid,.form-grid,.exercise-cards{grid-template-columns:1fr}.brand{font-size:24px}.app{padding:14px 14px 94px}.datebox{max-width:150px}.dayrow{grid-template-columns:76px 68px 1fr}
 }
@@ -251,6 +258,36 @@ textarea{min-height:90px}
       <div class="btns"><button class="btn" id="recordSetUniversal">Record Set</button></div>
       <div id="setQueue" class="set-queue"></div>
       <p id="saveMsg" class="sub"></p>
+
+      <div class="exercise-manager">
+        <h3 style="margin:0 0 6px">Exercise Library</h3>
+        <p class="sub" style="margin-top:0">Add your own exercises and assign them to a training focus.</p>
+        <div class="exercise-manager-grid">
+          <label>Exercise name<input id="newExerciseName" placeholder="e.g. Cable Row"></label>
+          <label>Category
+            <select id="newExerciseFocus">
+              <option>Push Strength</option><option>Push Power</option>
+              <option>Pull Strength</option><option>Pull Power</option>
+              <option>Lower Strength</option><option>Lower Power</option>
+              <option>Aerobic Base</option><option>Conditioning</option>
+              <option>Skill</option><option>Mobility</option><option>Recovery</option>
+              <option>Core</option><option>Power</option>
+            </select>
+          </label>
+          <label>Tracking
+            <select id="newExerciseTracking">
+              <option value="strength">Weight + reps</option>
+              <option value="reps">Reps + sets</option>
+              <option value="time">Time + RPE</option>
+              <option value="distance">Distance + reps</option>
+              <option value="aerobic">Distance + time</option>
+            </select>
+          </label>
+        </div>
+        <div class="btns"><button type="button" class="btn secondary" id="addExerciseBtn">Add Exercise</button></div>
+        <p id="exerciseLibraryMsg" class="sub"></p>
+        <div id="customExerciseList" class="exercise-library"></div>
+      </div>
     </div>
   </section>
 
@@ -301,7 +338,7 @@ textarea{min-height:90px}
 
 <script>
 const KEY='athleteOS_v4';
-const exerciseDefs={
+let exerciseDefs={
   'Bench Press':{metrics:['kg','reps'],group:'Strength'},
   'Dips':{metrics:['kg','reps'],group:'Strength'},
   'Weighted Dips / Bench':{metrics:['kg','reps'],group:'Strength'},
@@ -389,12 +426,34 @@ const defaultState={
     {name:'£5k Competition',date:'2027-01-08',type:'A'},
     {name:'World Championships',date:'2027-07-15',type:'A'}
   ],
-  readiness:'Normal'
+  readiness:'Normal',
+  customExercises:{}
 };
 
 let state;
 try{state=JSON.parse(localStorage.getItem(KEY))||structuredClone(defaultState)}catch(e){state=structuredClone(defaultState)}
+if(!state.customExercises)state.customExercises={};
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function trackingMetrics(kind){
+  const map={
+    strength:['kg','reps'],
+    reps:['reps','sets'],
+    time:['time (min)','RPE'],
+    distance:['distance (m)','reps'],
+    aerobic:['distance (km)','time (min)']
+  };
+  return map[kind]||['kg','reps'];
+}
+function refreshExerciseDefs(){
+  Object.entries(state.customExercises||{}).forEach(([name,def])=>{
+    exerciseDefs[name]={metrics:def.metrics||trackingMetrics(def.tracking),group:def.focus||'Training',focus:def.focus||'Training',custom:true};
+  });
+}
+function customFocusForExercise(ex){
+  return state.customExercises?.[ex]?.focus || null;
+}
+refreshExerciseDefs();
+
 
 const REST_TIMER_KEY='athleteOS_restTimerEnd';
 let restTimerInterval=null;
@@ -521,7 +580,9 @@ function renderHomeSession(){
   document.getElementById('sessionBox').innerHTML=list.length?list.map(x=>`<label style="display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)"><input type="checkbox" style="width:20px;margin:0"> <span>${x}</span></label>`).join(''):'<p class="sub">No planned training today.</p>';
 }
 function parseDisplayDateToDate(v){const p=String(v||'').split('/').map(Number);return p.length===3&&p.every(Number.isFinite)?new Date(p[2],p[1]-1,p[0],12):null}
-function focusForExercise(ex){return ({'Bench Press':'Push Strength','Dips':'Push Strength','Weighted Dips / Bench':'Push Strength','Smith Machine Bar Throws':'Push Power','Banded Smith Machine Bar Throws':'Push Power','Pull Ups':'Pull Strength','Weighted Pull Ups':'Pull Strength','Cable Rows':'Pull Strength','Plyo BW Rows':'Pull Power','Heavy Squats':'Lower Strength','Pistol Squats':'Lower Strength','Push-ups':'Push Strength','Sprints 5m':'Lower Power','Sprints 10m':'Lower Power','Sprints 15m':'Lower Power','Sprints 20m':'Lower Power','Sprints 25m':'Lower Power','Sprints 40m':'Lower Power','40yd Dash':'Lower Power','Zone 2 Run':'Aerobic Base','Football':'Conditioning','Karate Technical / Drilling':'Skill','Karate Sparring':'Skill','Karate Tactical':'Skill','Mobility Session':'Mobility','Light Mobility + Sauna':'Recovery','Core Circuit':'Core','Broad Jump':'Lower Power','Hops':'Lower Power','Med Ball Throw':'Power'})[ex]||exerciseDefs[ex]?.group||'Training'}
+function focusForExercise(ex){
+  const custom=customFocusForExercise(ex);
+  if(custom)return custom;return ({'Bench Press':'Push Strength','Dips':'Push Strength','Weighted Dips / Bench':'Push Strength','Smith Machine Bar Throws':'Push Power','Banded Smith Machine Bar Throws':'Push Power','Pull Ups':'Pull Strength','Weighted Pull Ups':'Pull Strength','Cable Rows':'Pull Strength','Plyo BW Rows':'Pull Power','Heavy Squats':'Lower Strength','Pistol Squats':'Lower Strength','Push-ups':'Push Strength','Sprints 5m':'Lower Power','Sprints 10m':'Lower Power','Sprints 15m':'Lower Power','Sprints 20m':'Lower Power','Sprints 25m':'Lower Power','Sprints 40m':'Lower Power','40yd Dash':'Lower Power','Zone 2 Run':'Aerobic Base','Football':'Conditioning','Karate Technical / Drilling':'Skill','Karate Sparring':'Skill','Karate Tactical':'Skill','Mobility Session':'Mobility','Light Mobility + Sauna':'Recovery','Core Circuit':'Core','Broad Jump':'Lower Power','Hops':'Lower Power','Med Ball Throw':'Power'})[ex]||exerciseDefs[ex]?.group||'Training'}
 function uniqueFocusesForExercises(list){return [...new Set((list||[]).map(focusForExercise))]}
 function logsForDate(dateUK){return state.logs.map((l,i)=>({...l,_index:i})).filter(l=>(l.sessionDate||l.date)===dateUK)}
 function formatExerciseSets(logs){return logs.length?logs.map((l,i)=>`<div class="previous-set"><b>Set ${i+1}</b> · ${l.value} ${l.metric}${l.secondary!==''&&l.secondary!=null?` · ${l.secondary} ${l.secondaryMetric||''}`:''}${l.notes?`<br>${l.notes}`:''}</div>`).join(''):'<div class="sub">No sets logged.</div>'}
@@ -660,7 +721,32 @@ function getMetrics(ex){
   const m=exerciseDefs[ex]?.metrics||['value'];
   return {primary:m[0],secondary:m[1]||''};
 }
+
+function renderCustomExerciseList(){
+  const box=document.getElementById('customExerciseList');
+  if(!box)return;
+  const entries=Object.entries(state.customExercises||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  box.innerHTML=entries.length?entries.map(([name,def])=>`
+    <div class="exercise-library-row">
+      <div><b>${name}</b><small>${def.focus} · ${(def.metrics||trackingMetrics(def.tracking)).join(' + ')}</small></div>
+      <button type="button" class="btn ghost delete-custom-exercise" data-name="${name}" style="padding:6px 9px;font-size:11px">Delete</button>
+    </div>`).join(''):'<div class="sub">No custom exercises yet.</div>';
+
+  box.querySelectorAll('.delete-custom-exercise').forEach(btn=>btn.addEventListener('click',()=>{
+    const name=btn.dataset.name;
+    if(confirm(`Delete ${name} from your Exercise Library? Existing logged sets will stay in your history.`)){
+      delete state.customExercises[name];
+      delete exerciseDefs[name];
+      save();
+      populateExercises();
+      renderCustomExerciseList();
+      renderProgress();
+    }
+  }));
+}
+
 function populateExercises(){
+  refreshExerciseDefs();
   const sel=document.getElementById('exerciseSelect');
   sel.innerHTML=Object.keys(exerciseDefs).sort().map(x=>`<option>${x}</option>`).join('');
   updateLogFields();
@@ -970,6 +1056,28 @@ document.getElementById('recordSetUniversal').addEventListener('click',()=>{
   document.getElementById('logNotes').value='';
   save(); renderSetQueue(); renderProgress(); startRestTimer(180);
   document.getElementById('saveMsg').textContent='Set recorded.';
+});
+
+
+document.getElementById('addExerciseBtn').addEventListener('click',()=>{
+  const name=document.getElementById('newExerciseName').value.trim();
+  const focus=document.getElementById('newExerciseFocus').value;
+  const tracking=document.getElementById('newExerciseTracking').value;
+  const msg=document.getElementById('exerciseLibraryMsg');
+
+  if(!name){msg.textContent='Enter an exercise name.';return}
+  if(exerciseDefs[name] || state.customExercises?.[name]){
+    msg.textContent='That exercise already exists.';
+    return;
+  }
+
+  state.customExercises[name]={focus,tracking,metrics:trackingMetrics(tracking)};
+  exerciseDefs[name]={metrics:trackingMetrics(tracking),group:focus,focus,custom:true};
+  save();
+  populateExercises();
+  renderCustomExerciseList();
+  document.getElementById('newExerciseName').value='';
+  msg.textContent=`${name} added to ${focus}.`;
 });
 
 document.getElementById('addComp').addEventListener('click',()=>{
