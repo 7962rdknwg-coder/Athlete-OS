@@ -254,6 +254,7 @@ textarea{min-height:90px}
     <div class="card">
       <h2>Log Exercise</h2>
       <div class="form-grid">
+        <label>Training Focus<select id="trainingFocusSelect"></select></label>
         <label>Exercise<select id="exerciseSelect"></select></label>
         <label>Date<input id="logDate" type="date"></label>
         <label id="primaryFieldLabel">Primary value<input id="primaryValue" inputmode="decimal" placeholder=""></label>
@@ -823,10 +824,49 @@ function renderCustomExerciseList(){
   }));
 }
 
+
+const ALL_TRAINING_FOCUSES=[
+  'Push Strength','Push Power','Pull Strength','Pull Power',
+  'Lower Strength','Lower Power','Aerobic Base','Anaerobic Training',
+  'Mobility','Core','Skill','Recovery','Conditioning','Power'
+];
+
+function programmedFocusesForLogDate(){
+  const input=document.getElementById('logDate');
+  const date=input?.value?parseDateLocal(input.value):new Date();
+  const plan=plannedSessionForDate(date);
+  return plan.competition?[]:uniqueFocusesForExercises(plan.list);
+}
+
+function renderTrainingFocusOptions(preserve=true){
+  const sel=document.getElementById('trainingFocusSelect');
+  if(!sel)return;
+  const previous=preserve?sel.value:'';
+  const programmed=programmedFocusesForLogDate();
+  const all=[...new Set([...programmed,...ALL_TRAINING_FOCUSES,...Object.values(state.customExercises||{}).map(d=>d.focus).filter(Boolean)])];
+  sel.innerHTML=all.map(f=>{
+    const star=programmed.includes(f)?'★ ':'';
+    return `<option value="${f}">${star}${f}</option>`;
+  }).join('');
+  if(previous && all.includes(previous))sel.value=previous;
+  else if(programmed.length)sel.value=programmed[0];
+  else if(all.length)sel.value=all[0];
+}
+
+function exercisesForSelectedFocus(){
+  const focus=document.getElementById('trainingFocusSelect')?.value;
+  const names=Object.keys(exerciseDefs).sort();
+  if(!focus)return names;
+  return names.filter(ex=>focusForExercise(ex)===focus);
+}
+
 function populateExercises(){
   refreshExerciseDefs();
+  renderTrainingFocusOptions(true);
   const sel=document.getElementById('exerciseSelect');
-  sel.innerHTML=Object.keys(exerciseDefs).sort().map(x=>`<option>${x}</option>`).join('');
+  const filtered=exercisesForSelectedFocus();
+  sel.innerHTML=filtered.map(x=>`<option>${x}</option>`).join('');
+  if(!filtered.length)sel.innerHTML='<option value="">No exercises in this focus yet</option>';
   updateLogFields();
 }
 function updateLogFields(){
@@ -1116,6 +1156,21 @@ document.getElementById('adaptBtn').addEventListener('click',()=>{const x=docume
 const advice={fatigue:'Reduce volume but preserve the purpose. Keep the highest-quality work and cut accessories first.',time:'Short version: warm-up → priority work → main work → finish.',gym:'Use no-gym alternatives that preserve the same quality: acceleration, jumps, unilateral work and technical karate.',niggle:'Use only non-provocative work. Reduce stress and reassess before the next HIGH day.'};
 document.querySelectorAll('.adapt-choice').forEach(b=>b.addEventListener('click',()=>{const box=document.getElementById('adaptAnswer');box.style.display='block';box.textContent=advice[b.dataset.a]}));
 
+document.getElementById('trainingFocusSelect').addEventListener('change',()=>{
+  const sel=document.getElementById('exerciseSelect');
+  const filtered=exercisesForSelectedFocus();
+  sel.innerHTML=filtered.map(x=>`<option>${x}</option>`).join('');
+  if(!filtered.length)sel.innerHTML='<option value="">No exercises in this focus yet</option>';
+  updateLogFields();
+});
+document.getElementById('logDate').addEventListener('change',()=>{
+  renderTrainingFocusOptions(false);
+  const sel=document.getElementById('exerciseSelect');
+  const filtered=exercisesForSelectedFocus();
+  sel.innerHTML=filtered.map(x=>`<option>${x}</option>`).join('');
+  if(!filtered.length)sel.innerHTML='<option value="">No exercises in this focus yet</option>';
+  updateLogFields();
+});
 document.getElementById('exerciseSelect').addEventListener('change',updateLogFields);
 document.getElementById('logDate').addEventListener('change',renderSetQueue);
 document.getElementById('recordSetUniversal').addEventListener('click',()=>{
