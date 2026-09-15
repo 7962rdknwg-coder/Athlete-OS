@@ -377,6 +377,7 @@ let exerciseDefs={
   '40yd Dash':{metrics:['time (s)','notes'],group:'Speed'},
   'Zone 2 Run':{metrics:['distance (km)','time (min)'],group:'Aerobic'},
   'Football':{metrics:['time (min)','time Z4/5 (min)'],group:'Conditioning'},
+  'Anaerobic Training Z4/5':{metrics:['time (min)','RPE'],group:'Conditioning'},
   'Karate Technical / Drilling':{metrics:['time (min)','RPE'],group:'Karate'},
   'Karate Sparring':{metrics:['time (min)','RPE'],group:'Karate'},
   'Karate Tactical':{metrics:['time (min)','RPE'],group:'Karate'},
@@ -390,11 +391,11 @@ let exerciseDefs={
 
 const sessions={
   Mon:{type:'REST',green:[],amber:[]},
-  Tue:{type:'HIGH',green:['Bench Press','Dips','Football'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Football']},
+  Tue:{type:'HIGH',green:['Bench Press','Dips','Anaerobic Training Z4/5'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Anaerobic Training Z4/5']},
   Wed:{type:'LOW',green:['Pull Ups','Cable Rows','Mobility Session','Zone 2 Run'],amber:['Plyo BW Rows','Mobility Session','Zone 2 Run']},
   Thu:{type:'HIGH',green:['Heavy Squats','Pistol Squats','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 10m','Sprints 5m'],amber:['Broad Jump','Hops','Med Ball Throw','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 10m','Sprints 5m']},
   Fri:{type:'LOW',green:['Mobility Session','Zone 2 Run'],amber:['Light Mobility + Sauna','Zone 2 Run']},
-  Sat:{type:'HIGH',green:['Bench Press','Dips','Football'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Football']},
+  Sat:{type:'HIGH',green:['Bench Press','Dips','Anaerobic Training Z4/5'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Anaerobic Training Z4/5']},
   Sun:{type:'LOW',green:['Pull Ups','Cable Rows','Mobility Session','Zone 2 Run'],amber:['Plyo BW Rows','Mobility Session','Zone 2 Run']}
 };
 
@@ -653,7 +654,7 @@ function renderHomeSession(){
 function parseDisplayDateToDate(v){const p=String(v||'').split('/').map(Number);return p.length===3&&p.every(Number.isFinite)?new Date(p[2],p[1]-1,p[0],12):null}
 function focusForExercise(ex){
   const custom=customFocusForExercise(ex);
-  if(custom)return custom;return ({'Bench Press':'Push Strength','Dips':'Push Strength','Weighted Dips / Bench':'Push Strength','Smith Machine Bar Throws':'Push Power','Banded Smith Machine Bar Throws':'Push Power','Pull Ups':'Pull Strength','Weighted Pull Ups':'Pull Strength','Cable Rows':'Pull Strength','Plyo BW Rows':'Pull Power','Heavy Squats':'Lower Strength','Pistol Squats':'Lower Strength','Push-ups':'Push Strength','Sprints 5m':'Lower Power','Sprints 10m':'Lower Power','Sprints 15m':'Lower Power','Sprints 20m':'Lower Power','Sprints 25m':'Lower Power','Sprints 40m':'Lower Power','40yd Dash':'Lower Power','Zone 2 Run':'Aerobic Base','Football':'Conditioning','Karate Technical / Drilling':'Skill','Karate Sparring':'Skill','Karate Tactical':'Skill','Mobility Session':'Mobility','Light Mobility + Sauna':'Recovery','Core Circuit':'Core','Broad Jump':'Lower Power','Hops':'Lower Power','Med Ball Throw':'Power'})[ex]||exerciseDefs[ex]?.group||'Training'}
+  if(custom)return custom;return ({'Bench Press':'Push Strength','Dips':'Push Strength','Weighted Dips / Bench':'Push Strength','Smith Machine Bar Throws':'Push Power','Banded Smith Machine Bar Throws':'Push Power','Pull Ups':'Pull Strength','Weighted Pull Ups':'Pull Strength','Cable Rows':'Pull Strength','Plyo BW Rows':'Pull Power','Heavy Squats':'Lower Strength','Pistol Squats':'Lower Strength','Push-ups':'Push Strength','Sprints 5m':'Lower Power','Sprints 10m':'Lower Power','Sprints 15m':'Lower Power','Sprints 20m':'Lower Power','Sprints 25m':'Lower Power','Sprints 40m':'Lower Power','40yd Dash':'Lower Power','Zone 2 Run':'Aerobic Base','Football':'Conditioning','Anaerobic Training Z4/5':'Anaerobic Training','Karate Technical / Drilling':'Skill','Karate Sparring':'Skill','Karate Tactical':'Skill','Mobility Session':'Mobility','Light Mobility + Sauna':'Recovery','Core Circuit':'Core','Broad Jump':'Lower Power','Hops':'Lower Power','Med Ball Throw':'Power'})[ex]||exerciseDefs[ex]?.group||'Training'}
 function uniqueFocusesForExercises(list){return [...new Set((list||[]).map(focusForExercise))]}
 function logsForDate(dateUK){return state.logs.map((l,i)=>({...l,_index:i})).filter(l=>(l.sessionDate||l.date)===dateUK)}
 function formatExerciseSets(logs){return logs.length?logs.map((l,i)=>`<div class="previous-set"><b>Set ${i+1}</b> · ${l.value} ${l.metric}${l.secondary!==''&&l.secondary!=null?` · ${l.secondary} ${l.secondaryMetric||''}`:''}${l.notes?`<br>${l.notes}`:''}</div>`).join(''):'<div class="sub">No sets logged.</div>'}
