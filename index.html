@@ -389,13 +389,13 @@ let exerciseDefs={
 };
 
 const sessions={
-  Mon:{type:'HIGH',green:['Bench Press','Dips','Smith Machine Bar Throws','Core Circuit','Football','Zone 2 Run'],amber:['Weighted Dips / Bench','Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Football','Zone 2 Run']},
-  Tue:{type:'REST',green:[],amber:[]},
-  Wed:{type:'HIGH',green:['Zone 2 Run','Mobility Session','Core Circuit','Karate Technical / Drilling'],amber:['Karate Technical / Drilling','Karate Sparring']},
-  Thu:{type:'LOW',green:['Bench Press','Dips','Smith Machine Bar Throws'],amber:['Zone 2 Run','Light Mobility + Sauna']},
-  Fri:{type:'HIGH',green:['Zone 2 Run','Pull Ups','Cable Rows','Plyo BW Rows','Karate Technical / Drilling'],amber:['Heavy Squats','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 5m','Sprints 10m','Broad Jump','Hops','Med Ball Throw','Push-ups','Karate Tactical']},
-  Sat:{type:'LOW',green:['Mobility Session','Pistol Squats','Heavy Squats','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 5m','Sprints 10m','Core Circuit'],amber:['Mobility Session','Pull Ups','Banded Smith Machine Bar Throws','Plyo BW Rows']},
-  Sun:{type:'HIGH',green:['Karate Sparring'],amber:['Karate Sparring']}
+  Mon:{type:'REST',green:[],amber:[]},
+  Tue:{type:'HIGH',green:['Bench Press','Dips','Football'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Football']},
+  Wed:{type:'LOW',green:['Pull Ups','Cable Rows','Mobility Session','Zone 2 Run'],amber:['Plyo BW Rows','Mobility Session','Zone 2 Run']},
+  Thu:{type:'HIGH',green:['Heavy Squats','Pistol Squats','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 10m','Sprints 5m'],amber:['Broad Jump','Hops','Med Ball Throw','Sprints 40m','Sprints 25m','Sprints 15m','Sprints 10m','Sprints 5m']},
+  Fri:{type:'LOW',green:['Mobility Session','Zone 2 Run'],amber:['Light Mobility + Sauna','Zone 2 Run']},
+  Sat:{type:'HIGH',green:['Bench Press','Dips','Football'],amber:['Banded Smith Machine Bar Throws','Smith Machine Bar Throws','Football']},
+  Sun:{type:'LOW',green:['Pull Ups','Cable Rows','Mobility Session','Zone 2 Run'],amber:['Plyo BW Rows','Mobility Session','Zone 2 Run']}
 };
 
 
@@ -671,7 +671,7 @@ function previousDateForFocus(focus,beforeDate){
   return dates.length?dates[0][0]:null;
 }
 
-function plannedSessionForDate(date){const key=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()],day=sessions[key],phase=phaseForDate(date).toLowerCase();const a=state.comps.find(c=>c.type==='A'&&sameDate(parseDateLocal(c.date),date)),b=state.comps.find(c=>c.type==='B'&&sameDate(parseDateLocal(c.date),date));if(a)return {type:'A COMP',phase:'RED',list:[a.name],competition:true};if(b)return {type:'B COMP',phase:'RED',list:[b.name],competition:true};const mini=bMiniTaperForDate(date);if(mini?.days===2)return {type:'PRIMER',phase:'RED · MINI TAPER',list:['Speed / intensity primer','Reduced volume'],competition:false};if(mini?.days===1)return {type:'PRE-COMP',phase:'RED · MINI TAPER',list:['Mobility','Activation','Technical feel'],competition:false};return {type:day?.type||'REST',phase:phase.toUpperCase(),list:(day&&(day[phase]||day.amber||day.green))||[],competition:false}}
+function plannedSessionForDate(date){const key=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()],day=sessions[key],phase=phaseForDate(date).toLowerCase();const a=state.comps.find(c=>c.type==='A'&&sameDate(parseDateLocal(c.date),date)),b=state.comps.find(c=>c.type==='B'&&sameDate(parseDateLocal(c.date),date));if(a)return {type:'A COMP',phase:'RED',list:[a.name],competition:true};if(b)return {type:'B COMP',phase:'RED',list:[b.name],competition:true};const mini=bMiniTaperForDate(date);if(mini?.days===2)return {type:'PRIMER',phase:'RED · MINI TAPER',list:['Speed / intensity primer','Reduced volume'],competition:false};if(mini?.days===1)return {type:'PRE-COMP',phase:'RED · MINI TAPER',list:['Mobility','Activation','Technical feel'],competition:false};const sessionPhase=phase==='red'?'amber':phase;return {type:day?.type||'REST',phase:phase.toUpperCase(),list:(day&&(day[sessionPhase]||day.green))||[],competition:false}}
 function renderCalendarSelectedDate(dateISO){const box=document.getElementById('calendarSession'),date=parseDateLocal(dateISO),plan=plannedSessionForDate(date),dateUK=date.toLocaleDateString('en-GB'),logged=logsForDate(dateUK);box.classList.add('open');box.innerHTML=`<b style="font-size:18px">${date.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</b><div class="sub" style="margin-top:3px">${plan.phase} · ${plan.type}</div><div style="margin-top:12px"><div class="estimate-label">Planned session</div>${plan.list.length?plan.list.map(ex=>`<div class="previous-exercise"><b>${ex}</b>${exerciseDefs[ex]?`<div class="sub" style="font-size:12px">${focusForExercise(ex)}</div>`:''}</div>`).join(''):'<div class="sub" style="margin-top:6px">Rest / recovery</div>'}</div>${logged.length?`<div style="margin-top:14px"><div class="estimate-label">Logged session</div><div class="previous-session">${renderDateSessionBreakdown(dateUK)}</div></div>`:''}`}
 
 function renderPlan(){
@@ -681,7 +681,13 @@ function renderPlan(){
 
   document.getElementById('planWeekLabel').textContent=
     `${weekStart.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${weekEnd.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
-  document.getElementById('planWeekPhase').textContent='Phase → training focus → previous session';
+  {
+    const mid=addDays(weekStart,3), p=phaseForDate(mid);
+    document.getElementById('planWeekPhase').textContent=
+      p==='RED'?'RED · Taper · ~30% less volume · maintain intensity/quality':
+      p==='AMBER'?'AMBER · Power / speed emphasis':
+      'GREEN · Build · strength / aerobic base';
+  }
 
   const order=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const now=new Date();
